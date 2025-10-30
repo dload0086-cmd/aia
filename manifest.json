@@ -1,0 +1,23 @@
+{
+  "name": "AI Subtitle Generator",
+  "short_name": "AI Subtitles",
+  "description": "A pure HTML/CSS/JS application that uses the Gemini API to automatically generate subtitles for video and audio files. Users can upload a file and receive subtitles in VTT or SRT format.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#a16207",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

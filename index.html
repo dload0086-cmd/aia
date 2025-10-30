@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Subtitle Generator</title>
+    <!-- PWA additions -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#a16207">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- End PWA additions -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-primary': '#a16207', // Brown
+              'brand-secondary': '#ca8a04', // Darker Yellow/Brown
+              'brand-light': '#facc15', // Lighter Yellow
+              'base-dark': '#ffffff', // White background
+              'base-light': '#000000', // Black text
+              'surface-dark': '#f3f4f6', // Light gray for surfaces
+              'surface-light': '#ffffff',
+              'text-primary': '#1f2937',
+              'text-secondary': '#6b7280',
+              'border-color': '#d1d5db',
+            }
+          }
+        }
+      }
+    </script>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0"
+      }
+    }
+    </script>
+</head>
+<body class="bg-base-dark text-text-primary font-sans">
+    <div id="app-container" class="relative min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8">
+        
+        <div id="key-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 transition-opacity duration-300" aria-modal="true" role="dialog">
+            <div class="bg-surface-light rounded-lg shadow-xl p-6 w-full max-w-md m-4">
+                <h2 class="text-2xl font-bold mb-4 text-text-primary">Enter API Key</h2>
+                <p class="text-text-secondary mb-4">
+                    To use this application, you need a Google AI API key. You can get one from
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-brand-primary hover:underline font-medium">
+                        Google AI Studio
+                    </a>.
+                </p>
+                <input
+                    id="temp-api-key"
+                    type="password"
+                    placeholder="Enter your API key"
+                    class="w-full p-2 bg-white border border-border-color rounded-md text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    aria-label="API Key Input"
+                />
+                <div class="mt-6 flex justify-end gap-4">
+                    <button
+                       id="cancel-key-btn"
+                       class="px-4 py-2 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        id="save-key-btn"
+                        class="px-5 py-2 bg-brand-primary text-white font-semibold rounded-md hover:bg-brand-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Save Key
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <header class="w-full max-w-6xl grid grid-cols-3 items-center mb-8">
+            <div class="col-start-1">
+                <!-- Intentionally empty to balance the layout -->
+            </div>
+            <div class="col-start-2 flex items-center justify-center gap-4">
+               <div class="w-8 h-8 text-brand-primary">
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                   </svg>
+               </div>
+               <h1 class="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-light text-transparent bg-clip-text whitespace-nowrap">Aikacungwen HTML</h1>
+            </div>
+            <div class="col-start-3 flex justify-end">
+                <button id="set-api-key-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-primary bg-surface-light border border-border-color rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-dark focus:ring-brand-primary transition-colors" title="Set Google AI API Key">
+                    <div class="w-5 h-5">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+                      </svg>
+                    </div>
+                    <span class="hidden sm:inline">Set API Key</span>
+                </button>
+            </div>
+        </header>
+        
+        <main class="w-full max-w-6xl flex-grow">
+            <section id="subtitle-generator-section" class="w-full max-w-6xl mx-auto">
+                <header class="text-center mb-8">
+                    <div class="flex items-center justify-center gap-4 mb-2">
+                       <div class="w-8 h-8 text-brand-primary">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                           </svg>
+                       </div>
+                       <h2 class="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-light text-transparent bg-clip-text">Generator Subtitle By AI</h2>
+                    </div>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div id="media-container" class="flex flex-col gap-6">
+                        <div id="file-upload-area" class="relative border-2 border-dashed border-gray-400 rounded-lg p-8 w-full h-80 flex flex-col justify-center items-center text-center cursor-pointer hover:border-brand-primary transition-colors duration-300 bg-amber-50/50">
+                            <input type="file" id="file-input" accept="video/*,audio/*" class="hidden" />
+                            <div class="w-16 h-16 text-gray-500 mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-text-primary">Drag & drop a video or audio file</h3>
+                            <p class="text-text-secondary">or click to select</p>
+                            <p class="text-xs text-gray-500 mt-2">MP4, MOV, MP3, etc.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-6">
+                        <button id="generate-subtitles-btn" class="w-full flex items-center justify-center gap-3 px-6 py-4 text-lg font-semibold text-white bg-brand-primary rounded-md shadow-lg hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-dark focus:ring-brand-primary disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105">
+                            <span class="btn-icon w-6 h-6">
+                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6.343 6.343l2.829 2.829m11.314-5.657l-2.829 2.829M21 5h-4M12 3v4m0 14v-4m-3.657-3.657l-2.829-2.829m5.657 5.657l-2.829 2.829M12 21a9 9 0 110-18 9 9 0 010 18z" />
+                               </svg>
+                            </span>
+                            <span class="btn-text">Generate Subtitles</span>
+                        </button>
+                        
+                        <div id="subtitle-result-container" class="bg-amber-50/50 rounded-lg p-4 h-full min-h-[20rem]">
+                            <div class="flex flex-col items-center justify-center h-full text-text-secondary">
+                                <p>Your generated content will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="my-16 border-t-2 border-gray-200"></div>
+
+            <section class="w-full max-w-6xl mx-auto">
+                <header class="text-center mb-8">
+                    <div class="flex items-center justify-center gap-4 mb-2">
+                       <div class="w-8 h-8 text-brand-secondary">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
+                          </svg>
+                       </div>
+                       <h2 class="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-secondary to-brand-light text-transparent bg-clip-text">Prompt Playground</h2>
+                    </div>
+                </header>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="flex flex-col gap-4">
+                        <textarea
+                            id="prompt-input"
+                            placeholder="Enter your prompt here... e.g., 'Write a short story about a robot who discovers music.'"
+                            class="w-full h-48 p-4 bg-white border border-border-color rounded-lg text-text-primary placeholder-gray-500 focus:ring-2 focus:ring-brand-secondary focus:border-brand-secondary transition-colors"
+                        ></textarea>
+                        <button
+                            id="generate-prompt-btn"
+                            class="w-full flex items-center justify-center gap-3 px-6 py-4 text-lg font-semibold text-white bg-brand-secondary rounded-md shadow-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-base-dark focus:ring-brand-secondary disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
+                        >
+                           <span class="btn-icon w-6 h-6">
+                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6.343 6.343l2.829 2.829m11.314-5.657l-2.829 2.829M21 5h-4M12 3v4m0 14v-4m-3.657-3.657l-2.829-2.829m5.657 5.657l-2.829 2.829M12 21a9 9 0 110-18 9 9 0 010 18z" />
+                               </svg>
+                           </span>
+                           <span class="btn-text">Generate Response</span>
+                        </button>
+                    </div>
+
+                    <div id="prompt-result-container" class="bg-amber-50/50 rounded-lg p-4 h-full min-h-[20rem]">
+                         <div class="flex flex-col items-center justify-center h-full text-text-secondary">
+                            <p>The AI's response will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+
+        let apiKey = '';
+        let mediaFile = null;
+        let mediaType = null;
+        let subtitles = '';
+        let promptResult = '';
+        let subtitleStatus = 'idle';
+        let promptStatus = 'idle';
+
+        const keyModal = document.getElementById('key-modal');
+        const tempApiKeyInput = document.getElementById('temp-api-key');
+        const saveKeyBtn = document.getElementById('save-key-btn');
+        const cancelKeyBtn = document.getElementById('cancel-key-btn');
+        const setApiKeyBtn = document.getElementById('set-api-key-btn');
+        
+        const fileUploadArea = document.getElementById('file-upload-area');
+        const fileInput = document.getElementById('file-input');
+        const mediaContainer = document.getElementById('media-container');
+
+        const generateSubtitlesBtn = document.getElementById('generate-subtitles-btn');
+        const subtitleResultContainer = document.getElementById('subtitle-result-container');
+        
+        const promptInput = document.getElementById('prompt-input');
+        const generatePromptBtn = document.getElementById('generate-prompt-btn');
+        const promptResultContainer = document.getElementById('prompt-result-container');
+
+        const fileToBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const result = reader.result;
+                    const base64String = result.split(',')[1];
+                    if (base64String) {
+                        resolve(base64String);
+                    } else {
+                        reject(new Error("Could not extract Base64 string from file."));
+                    }
+                };
+                reader.onerror = (error) => reject(error);
+            });
+        };
+
+        const apiCallWithRetry = async (apiCall, maxRetries = 3, delay = 1000) => {
+            let retries = 0;
+            while (retries < maxRetries) {
+                try {
+                    return await apiCall();
+                } catch (error) {
+                    retries++;
+                    const errorMessage = (error.message || error.toString()).toLowerCase();
+                    const isRetryable = errorMessage.includes('503') || 
+                                        errorMessage.includes('unavailable') || 
+                                        errorMessage.includes('overloaded');
+
+                    if (isRetryable && retries < maxRetries) {
+                        console.warn(`API call failed, retrying in ${delay}ms... (Attempt ${retries}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        throw error; // Rethrow if not retryable or max retries reached
+                    }
+                }
+            }
+        };
+
+        const parseErrorMessage = (error) => {
+            let message = error.message || error.toString();
+            console.error("Caught error:", error); // Log the full error for debugging
+
+            if (message.includes('API key not valid')) {
+                return 'The provided API Key is not valid. Please check it and save it again.';
+            }
+            if (message.includes('503') || message.includes('UNAVAILABLE') || message.includes('overloaded')) {
+                return 'The AI model is currently busy or overloaded. Please try again in a few moments.';
+            }
+            if (message.includes('invalid subtitle format')) {
+                return 'The AI returned an invalid subtitle format. This can happen occasionally. Please try generating again.';
+            }
+            
+            if (message.includes('{') && message.includes('}')) {
+                try {
+                    const jsonString = message.substring(message.indexOf('{'), message.lastIndexOf('}') + 1);
+                    const errorObj = JSON.parse(jsonString);
+                    if (errorObj.error && errorObj.error.message) {
+                        return errorObj.error.message;
+                    }
+                } catch (e) { /* Ignore parsing errors, fall through */ }
+            }
+            
+            return 'An unexpected error occurred. Please check the console for more details.';
+        };
+
+
+        const showLoadingSpinner = (button) => {
+            button.disabled = true;
+            const btnText = button.querySelector('.btn-text');
+            const btnIcon = button.querySelector('.btn-icon');
+            if (btnText) btnText.textContent = 'Generating...';
+            if (btnIcon) {
+                btnIcon.innerHTML = `
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                `;
+            }
+        };
+
+        const hideLoadingSpinner = (button, originalText, originalIcon) => {
+            button.disabled = false;
+            const btnText = button.querySelector('.btn-text');
+            const btnIcon = button.querySelector('.btn-icon');
+            if (btnText) btnText.textContent = originalText;
+            if (btnIcon) btnIcon.innerHTML = originalIcon;
+        };
+        
+        const renderError = (container, message) => {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-red-600 bg-red-100 rounded-md p-4">
+                    <div class="w-10 h-10 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h4 class="font-bold mb-1">Error</h4>
+                    <p class="text-center text-sm">${message}</p>
+                </div>
+            `;
+        };
+
+        const generateSubtitlesFromApi = async (file, key) => {
+            if (!key) throw new Error("API Key is missing.");
+            const ai = new GoogleGenAI({ apiKey: key });
+
+            const isAudio = file.type.startsWith('audio/');
+            const prompt = isAudio ?
+                `You are an expert in professional media transcription. Your task is to generate subtitles in the SubRip (.srt) format from the provided audio file.
+
+Follow these rules strictly:
+1. First, identify the primary spoken language in the audio.
+2. Transcribe the spoken words in that language accurately.
+3. Describe significant non-speech audio events (e.g., (music), (laughter), (explosion)) in parentheses on their own lines.
+4. The entire output MUST be in valid SRT format.
+5. Timestamps must be precise and in the format: HH:MM:SS,mmm --> HH:MM:SS,mmm.
+6. Ensure subtitle sequence numbers are correct and sequential, starting from 1.
+7. CRITICAL: Do NOT include any extra text, explanations, or markdown formatting (like \`\`\`srt) outside of the valid SRT content. The response must start directly with the number 1.` :
+                `You are an expert in professional media transcription. Your task is to generate subtitles in the WebVTT (.vtt) format from the provided video file.
+
+Follow these rules strictly:
+1. First, identify the primary spoken language in the video.
+2. Transcribe the spoken words in that language accurately.
+3. Describe significant non-speech audio events (e.g., (music), (laughter), (explosion)) in parentheses on their own lines.
+4. The entire output MUST be in valid VTT format.
+5. The response MUST start with "WEBVTT" on the very first line, followed by a blank line.
+6. Timestamps must be precise and in the format: HH:MM:SS.mmm --> HH:MM:SS.mmm.
+7. CRITICAL: Do NOT include any extra text, explanations, or markdown formatting (like \`\`\`vtt) outside of the valid VTT content. The response must start directly with "WEBVTT".`;
+
+            try {
+                const mediaBase64 = await fileToBase64(file);
+                const mediaPart = { inlineData: { mimeType: file.type, data: mediaBase64 } };
+
+                const apiCall = () => ai.models.generateContent({
+                    model: 'gemini-2.5-pro',
+                    contents: { parts: [{ text: prompt }, mediaPart] },
+                });
+
+                const response = await apiCallWithRetry(apiCall);
+                const content = response.text.trim();
+                
+                if ((isAudio && !content.startsWith('1')) || (!isAudio && !content.startsWith('WEBVTT'))) {
+                    throw new Error('The AI returned an invalid subtitle format.');
+                }
+                return content;
+            } catch (error) {
+                // Re-throw the original error to be parsed by the UI layer
+                throw error;
+            }
+        };
+
+        const generateFromPromptApi = async (prompt, key) => {
+            if (!key) throw new Error("API Key is missing.");
+            const ai = new GoogleGenAI({ apiKey: key });
+
+            try {
+                 const apiCall = () => ai.models.generateContent({
+                    model: 'gemini-flash-lite-latest',
+                    contents: prompt,
+                });
+                const response = await apiCallWithRetry(apiCall);
+                return response.text;
+            } catch (error) {
+                // Re-throw the original error to be parsed by the UI layer
+                throw error;
+            }
+        };
+
+        const openKeyModal = () => {
+            tempApiKeyInput.value = apiKey;
+            keyModal.classList.remove('hidden');
+        };
+        const closeKeyModal = () => keyModal.classList.add('hidden');
+        
+        const saveApiKey = () => {
+            apiKey = tempApiKeyInput.value;
+            closeKeyModal();
+        };
+
+        const handleFileSelect = (file) => {
+            if (!file) return;
+
+            if (file.type.startsWith('video/')) {
+                mediaType = 'video';
+            } else if (file.type.startsWith('audio/')) {
+                mediaType = 'audio';
+            } else {
+                renderError(subtitleResultContainer, 'Please select a valid video or audio file.');
+                return;
+            }
+            mediaFile = file;
+            renderMedia();
+        };
+
+        const renderMedia = () => {
+            mediaContainer.innerHTML = ''; 
+            const url = URL.createObjectURL(mediaFile);
+            
+            if (mediaType === 'video') {
+                const videoEl = document.createElement('video');
+                videoEl.className = 'w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg';
+                videoEl.controls = true;
+                videoEl.crossOrigin = 'anonymous';
+                
+                const sourceEl = document.createElement('source');
+                sourceEl.src = url;
+                sourceEl.type = mediaFile.type;
+                
+                videoEl.appendChild(sourceEl);
+                mediaContainer.appendChild(videoEl);
+
+            } else if (mediaType === 'audio') {
+                 mediaContainer.innerHTML = `
+                    <div class="w-full h-80 bg-surface-dark rounded-lg overflow-hidden shadow-lg p-6 flex flex-col items-center justify-center">
+                        <div class="w-24 h-24 text-brand-primary mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                            </svg>
+                        </div>
+                        <p class="text-text-primary mb-4 truncate w-full text-center px-4">${mediaFile.name}</p>
+                        <audio controls class="w-full">
+                            <source src="${url}" type="${mediaFile.type}">
+                        </audio>
+                    </div>
+                `;
+            }
+        };
+        
+        const handleDownload = () => {
+            if (!subtitles || !mediaFile) return;
+            const isAudio = mediaType === 'audio';
+            const blobType = isAudio ? 'text/plain' : 'text/vtt';
+            const fileExtension = isAudio ? '.srt' : '.vtt';
+            
+            const blob = new Blob([subtitles], { type: blobType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const fileName = mediaFile.name.replace(/\.[^/.]+$/, "") || 'subtitles';
+            a.download = `${fileName}${fileExtension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+        
+        const handleCopy = (text, button) => {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = `
+                    <div class="w-4 h-4 text-green-600"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg></div>
+                    Copied!
+                `;
+                button.disabled = true;
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 2000);
+            });
+        };
+        
+        const renderSubtitleResult = () => {
+            const isAudio = mediaType === 'audio';
+            const title = isAudio ? 'Generated Subtitles (SRT)' : 'Generated Subtitles (VTT)';
+            const downloadText = isAudio ? 'Download .srt' : 'Download .vtt';
+
+            subtitleResultContainer.innerHTML = `
+                <div class="flex flex-col h-full">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold text-text-primary">${title}</h3>
+                        <div class="flex items-center gap-2">
+                            <button id="copy-subtitle-btn" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-primary bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                                <div class="w-4 h-4"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></div>
+                                Copy
+                            </button>
+                            <button id="download-btn" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors">
+                               <div class="w-4 h-4"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></div>
+                                ${downloadText}
+                            </button>
+                        </div>
+                    </div>
+                    <pre class="w-full flex-grow bg-gray-100 text-gray-800 p-3 rounded-md overflow-auto text-sm font-mono whitespace-pre-wrap">${subtitles}</pre>
+                </div>
+            `;
+            document.getElementById('download-btn').addEventListener('click', handleDownload);
+            const copyBtn = document.getElementById('copy-subtitle-btn');
+            copyBtn.addEventListener('click', () => handleCopy(subtitles, copyBtn));
+        };
+
+        const renderPromptResult = () => {
+             promptResultContainer.innerHTML = `
+                <div class="flex flex-col h-full">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold text-text-primary">AI Response</h3>
+                        <button id="copy-prompt-btn" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-primary bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                            <div class="w-4 h-4"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></div>
+                            Copy
+                        </button>
+                    </div>
+                    <pre class="w-full flex-grow bg-gray-100 text-gray-800 p-3 rounded-md overflow-auto text-sm font-mono whitespace-pre-wrap">${promptResult}</pre>
+                </div>
+            `;
+            const copyBtn = document.getElementById('copy-prompt-btn');
+            copyBtn.addEventListener('click', () => handleCopy(promptResult, copyBtn));
+        }
+
+        setApiKeyBtn.addEventListener('click', openKeyModal);
+        cancelKeyBtn.addEventListener('click', closeKeyModal);
+        saveKeyBtn.addEventListener('click', saveApiKey);
+        tempApiKeyInput.addEventListener('input', () => {
+            saveKeyBtn.disabled = !tempApiKeyInput.value.trim();
+        });
+
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileUploadArea.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        fileUploadArea.addEventListener('drop', (e) => handleFileSelect(e.dataTransfer.files[0]));
+
+        generateSubtitlesBtn.addEventListener('click', async () => {
+            if (!apiKey) {
+                renderError(subtitleResultContainer, 'Please set your Google AI API key.');
+                openKeyModal();
+                return;
+            }
+            if (!mediaFile) {
+                renderError(subtitleResultContainer, 'Please select a video or audio file first.');
+                return;
+            }
+
+            subtitleStatus = 'loading';
+            const originalIcon = generateSubtitlesBtn.querySelector('.btn-icon').innerHTML;
+            showLoadingSpinner(generateSubtitlesBtn);
+            subtitleResultContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-text-secondary"><p class="text-lg">AI is analyzing your file...</p><p class="text-sm">This may take a few moments.</p></div>`;
+
+            try {
+                const result = await generateSubtitlesFromApi(mediaFile, apiKey);
+                subtitles = result;
+                subtitleStatus = 'success';
+                renderSubtitleResult();
+            } catch (err) {
+                subtitleStatus = 'error';
+                const userFriendlyMessage = parseErrorMessage(err);
+                renderError(subtitleResultContainer, userFriendlyMessage);
+            } finally {
+                hideLoadingSpinner(generateSubtitlesBtn, 'Generate Subtitles', originalIcon);
+            }
+        });
+
+        generatePromptBtn.addEventListener('click', async () => {
+            if (!apiKey) {
+                renderError(promptResultContainer, 'Please set your Google AI API key.');
+                openKeyModal();
+                return;
+            }
+            const prompt = promptInput.value;
+            if (!prompt.trim()) {
+                renderError(promptResultContainer, 'Please enter a prompt.');
+                return;
+            }
+
+            promptStatus = 'loading';
+            const originalIcon = generatePromptBtn.querySelector('.btn-icon').innerHTML;
+            showLoadingSpinner(generatePromptBtn);
+            promptResultContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-text-secondary"><p class="text-lg">AI is thinking...</p></div>`;
+
+            try {
+                const result = await generateFromPromptApi(prompt, apiKey);
+                promptResult = result;
+                promptStatus = 'success';
+                renderPromptResult();
+            } catch (err) {
+                promptStatus = 'error';
+                const userFriendlyMessage = parseErrorMessage(err);
+                renderError(promptResultContainer, userFriendlyMessage);
+            } finally {
+                hideLoadingSpinner(generatePromptBtn, 'Generate Response', originalIcon);
+            }
+        });
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
