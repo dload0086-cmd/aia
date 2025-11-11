@@ -328,7 +328,25 @@
             const prompt = isAudio ?
                 `You are an expert in professional media transcription and subtitling. Your primary task is to generate perfectly synchronized subtitles in the SubRip (.srt) format from the provided audio file. Timing accuracy and readability are paramount.\n\n**Your main focus is to transcribe only the human voices. Ignore all background sounds, music, and sound descriptions.**\n\nFollow these rules strictly:\n1. **Analyze Audio and Language:** First, carefully analyze the audio to identify the primary spoken language and spoken words.\n2. **Accurate Speech Transcription:** Transcribe the spoken words with the highest possible accuracy. Focus entirely on the dialogue.\n3. **Precise Synchronization:** This is the most critical step. The start and end timestamps for each subtitle entry must align *perfectly* with the spoken words in the audio. Ensure there is no noticeable delay or premature appearance of subtitles.\n4. **Improve Readability:** For better pacing, create a new subtitle line after a natural pause in speech, such as at the end of a sentence or where a comma would be appropriate.\n5. **Ignore Non-Speech Audio:** Do NOT transcribe background music, ambient noise, or sound effects. The final output must be completely clean of any non-dialogue text descriptions like (music), (audio), (laughter), etc.\n6. **Valid SRT Format:** The entire output MUST be in valid SRT format, containing: a sequential number, start/end timestamps (HH:MM:SS,mmm --> HH:MM:SS,mmm), the subtitle text, and a blank line before the next entry.\n7. **Sequence Integrity:** Ensure subtitle sequence numbers are correct and sequential, starting from 1.\n8. **Clean Output:** Do NOT include any extra text, explanations, or markdown formatting (like 'srt'). The response must begin directly with the number '1' followed by a newline.` :
                 `You are an expert in professional media transcription and subtitling. Your primary task is to generate perfectly synchronized subtitles in the WebVTT (.vtt) format from the provided video file. Timing accuracy and readability are paramount.\n\n**Your main focus is to transcribe only the human voices from the audio track. Ignore all background sounds, music, and sound descriptions.**\n\nFollow these rules strictly:\n1. **Analyze Audio and Language:** First, carefully analyze the video's audio track to identify the primary spoken language and spoken words.\n2. **Accurate Speech Transcription:** Transcribe the spoken words with the highest possible accuracy. Focus entirely on the dialogue.\n3. **Precise Synchronization:** This is the most critical step. The start and end timestamps for each subtitle entry must align *perfectly* with the spoken words in the audio. Ensure there is no noticeable delay or premature appearance of subtitles.\n4. **Improve Readability:** For better pacing, create a new subtitle line after a natural pause in speech, such as at the end of a sentence or where a comma would be appropriate.\n5. **Ignore Non-Speech Audio:** Do NOT transcribe background music, ambient noise, or sound effects. The final output must be completely clean of any non-dialogue text descriptions like (music), (audio), (laughter), etc.\n6. **Valid VTT Format:** The entire output MUST be in valid VTT format. The response MUST start with 'WEBVTT' on the very first line, followed by a blank line, and then the timestamp entries (HH:MM:SS.mmm --> HH:MM:SS.mmm).\n7. **Clean Output:** Do NOT include any extra text, explanations, or markdown formatting (like 'vtt'). The response must begin directly with 'WEBVTT'.`;
+                `taiming seperti ini 01:02:04,866 --> 01:02:08,026 tolong di perbaiki seharunya ada HH/00 di depan 
 
+dan line jangan di ubah.
+bisakah seperti ini :
+contoh:
+
+1000
+00:09:55,720 --> 00:09:57,360
+Kecuali dia bisa membuktikannya sendiri.
+
+jadi seperti ini :
+
+1000
+00:09:55,720 --> 00:09:57,360
+Kecuali dia bisa
+membuktikannya sendiri.
+
+agar rapih.`;
+                
             try {
                 const mediaBase64 = await fileToBase64(file);
                 const mediaPart = { inlineData: { mimeType: file.type, data: mediaBase64 } };
